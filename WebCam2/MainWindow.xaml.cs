@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,6 +32,7 @@ namespace WebCam2
     private string _dataPath;
     private CaptureObject _capturer = null;
     private int _fps;
+    private int zeroCount = 0;
     DispatcherTimer _dispatcherTimer = new DispatcherTimer();
 
 
@@ -66,7 +68,7 @@ namespace WebCam2
     public MainWindow()
     {
       InitializeComponent();
-      MainPlayer.Rotation = 180;
+      MainPlayer.Flip = true;
       _capDevice = new CapDevice(CapDevice.DeviceMonikers[0].MonikerString);
       MainPlayer.Device = _capDevice;
 
@@ -98,7 +100,17 @@ namespace WebCam2
         }
       }
 
+      this.Closed += MainWindow_Closed;
 
+    }
+
+    void MainWindow_Closed(object sender, EventArgs e)
+    {
+      MainPlayer.Device = null;
+      while (_capDevice.IsRunning)
+      {
+        Thread.Sleep(100);
+      }
     }
 
     void dispatcherTimer_Tick(object sender, EventArgs e)
@@ -108,6 +120,9 @@ namespace WebCam2
       _lastTime = time;
       _fps = Convert.ToInt32(Math.Round(1000.0 / Math.Max(span.TotalMilliseconds, 1)));
       FpsLabel.Text = "FPS: " + _fps.ToString();
+      if (MainPlayer.CurrentBitmap == null)
+        return;
+
       BitmapSource bitmap = MainPlayer.CurrentBitmap.Clone();
       BitmapSource prevImage = null;
       if (_capturer != null)
@@ -145,37 +160,77 @@ namespace WebCam2
 
       System.Drawing.Bitmap innerImage = CaptureObject.BitmapFromSource(image);
       System.Drawing.Bitmap innerPrevImage = CaptureObject.BitmapFromSource(prevImage);
-      foreach (HotSpot hotSpot in hotSpots)
+      try
       {
-        float sum = 0;
-        float result = 0;
-        float leftPixel;
-        float rightPixel;
-        int left = Convert.ToInt32(hotSpot.Bound.Left);
-        int right = Convert.ToInt32(hotSpot.Bound.Right);
-        int top = Convert.ToInt32(hotSpot.Bound.Top);
-        int bottom = Convert.ToInt32(hotSpot.Bound.Bottom);
-        for (int i = left; i < right; i++)
+        foreach (HotSpot hotSpot in hotSpots)
         {
-          for (int j = top; j < bottom; j++)
+          float sum = 0;
+          float result = 0;
+          float leftPixel;
+          float rightPixel;
+          int left = Convert.ToInt32(hotSpot.Bound.Left);
+          int right = Convert.ToInt32(hotSpot.Bound.Right);
+          int top = Convert.ToInt32(hotSpot.Bound.Top);
+          int bottom = Convert.ToInt32(hotSpot.Bound.Bottom);
+          for (int i = left; i < right; i++)
           {
-            leftPixel = RgbToGray(innerImage.GetPixel(i, j));
-            rightPixel = RgbToGray(innerPrevImage.GetPixel(i, j));
-            result += Math.Abs(leftPixel - rightPixel);
-            sum += 1;
+            for (int j = top; j < bottom; j++)
+            {
+              leftPixel = RgbToGray(innerImage.GetPixel(i, j));
+              rightPixel = RgbToGray(innerPrevImage.GetPixel(i, j));
+              result += Math.Abs(leftPixel - rightPixel);
+              sum += 1;
+            }
+          }
+
+          result = result / sum;
+          DeltaList.Items.Add(result);
+          if (DeltaList.Items.Count > 10)
+            DeltaList.Items.RemoveAt(0);
+
+          if (result == 0)
+          {
+            zeroCount++;
+            if (zeroCount == 10)
+            {
+              zeroCount = 0;
+              RecycleDevice();
+            }
+          }
+
+          if (result > sensitivity)
+          {
+            return true;
           }
         }
 
-        result = result / sum;
-        Console.WriteLine(result);
-        if (result > sensitivity)
-        {
-          return true;
-        }
+        return false;
+      }
+      finally
+      {
+        innerImage.Dispose();
+        innerPrevImage.Dispose();
+        GC.Collect();
       }
 
-      return false;
+    }
 
+    private void RecycleDevice()
+    {
+      bool isEnabled = _dispatcherTimer.IsEnabled;
+      _dispatcherTimer.Stop();
+      _capturer = null;
+      _images.Clear();
+      MainPlayer.Device = null;
+      while (_capDevice.IsRunning)
+      {
+        Thread.Sleep(100);
+      }
+      _capDevice = new CapDevice(CapDevice.DeviceMonikers[0].MonikerString);
+      MainPlayer.Device = _capDevice;
+
+      if (isEnabled)
+        _dispatcherTimer.Start();
     }
 
     private float RgbToGray(System.Drawing.Color color)

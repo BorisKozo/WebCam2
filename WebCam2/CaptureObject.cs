@@ -65,7 +65,7 @@ namespace WebCam2
           counter++;
         }
       }
-      ClearImages();
+      ClearImages(new List<System.Drawing.Bitmap>());
     }
 
     public static System.Drawing.Bitmap BitmapFromSource(BitmapSource bitmapsource)
@@ -83,22 +83,30 @@ namespace WebCam2
 
     public void SaveAsVideo()
     {
-
+      List<System.Drawing.Bitmap> bitmaps = new List<System.Drawing.Bitmap>();
       BitmapSource bmp = _images[0];
+      bitmaps.Add(BitmapFromSource(bmp));
       AviManager aviManager = new AviManager(Path.Combine(_targetPath, "video.avi"), false);
-      VideoStream aviStream = aviManager.AddVideoStream(false, _fps,BitmapFromSource(bmp));
+      VideoStream aviStream = aviManager.AddVideoStream(false, _fps,bitmaps[0]);
       for (int n = 1; n < _images.Count; n++)
       {
-        aviStream.AddFrame(BitmapFromSource(_images[n]));
+        bitmaps.Add(BitmapFromSource(_images[n]));
+        aviStream.AddFrame(bitmaps[n]);
       }
 
-      ClearImages();
       aviManager.Close();
+      ClearImages(bitmaps);
     }
 
-    private void ClearImages()
+    private void ClearImages(List<System.Drawing.Bitmap> bitmaps)
     {
       _images.Clear();
+      foreach (System.Drawing.Bitmap bitmap in bitmaps)
+      {
+        bitmap.Dispose();
+      }
+      bitmaps.Clear();
+      GC.Collect();
     }
 
 

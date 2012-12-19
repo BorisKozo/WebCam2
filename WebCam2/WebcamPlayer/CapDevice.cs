@@ -442,6 +442,7 @@ namespace CatenaLogic.Windows.Presentation.WebcamPlayer
 
             // Start the thread
             _worker = new Thread(RunWorker);
+            _worker.IsBackground = true;
             _worker.Start();
         }
 
@@ -463,7 +464,7 @@ namespace CatenaLogic.Windows.Presentation.WebcamPlayer
                     if (_worker != null)
                     {
                         // Join
-                        _worker.Join();
+                        _worker.Join(5000);
 
                         // Release
                         Release();

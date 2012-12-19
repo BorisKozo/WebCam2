@@ -14,13 +14,13 @@
             <Button MinWidth="75" Margin="10,0,10,0" x:Name="StartButton" Click="StartButton_Click">Start</Button>
             <Button MinWidth="75" Margin="0,0,10,0" x:Name="CaptureButton" Click="CaptureButton_Click">Capture</Button>
             <Label>Sensitivity:</Label>
-            <Slider Width="250" Margin="10,0,0,0" x:Name="SensitivitySlider" Maximum="255" Minimum="1" Value="25" ></Slider>
+            <Slider Width="250" Margin="10,0,0,0" x:Name="SensitivitySlider" Maximum="255" Minimum="1" Value="25" IsSnapToTickEnabled="True" ></Slider>
             <Label Margin="10,0,0,0" Content="{Binding Value, ElementName=SensitivitySlider}"></Label>
             <TextBlock Margin="10,0,0,0" x:Name="FpsLabel" VerticalAlignment="Center"></TextBlock>
         </StackPanel>
         <player:CapPlayer Margin="5" Width="640" Height="480" Grid.Row="1" x:Name="MainPlayer"></player:CapPlayer>
         <Canvas Margin="5" Width="640" Height="480" Grid.Row="1" x:Name="MainCanvas" MouseDown="MainCanvas_MouseDown" MouseMove="MainCanvas_MouseMove" Background="#00000000">
-            
+
         </Canvas>
         <GroupBox Header="HotSpots" Grid.Row="2">
             <Grid>
@@ -32,7 +32,14 @@
                     <Button x:Name="AddButton" MinWidth="75" Margin="10,0,0,0" Click="AddButton_Click">Add</Button>
                     <Button x:Name="DeleteButton" MinWidth="75" Margin="10,0,0,0" Click="DeleteButton_Click">Delete</Button>
                 </StackPanel>
-                <ListBox x:Name="HotSpotsList" Grid.Row="1" Margin="5"></ListBox>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="8*"></ColumnDefinition>
+                        <ColumnDefinition Width="2*"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <ListBox x:Name="HotSpotsList" Grid.Column="0" Margin="5"></ListBox>
+                    <ListBox x:Name="DeltaList" Grid.Column="1" Margin="5"></ListBox>
+                </Grid>
             </Grid>
         </GroupBox>
         <StatusBar Grid.Row="4">
